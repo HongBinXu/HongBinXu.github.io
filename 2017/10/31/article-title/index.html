@@ -8,19 +8,19 @@
   <link rel="dns-prefetch" href="http://yoursite.com">
   <title>python dlib学习（五）：比对人脸 | 许鸿斌个人博客</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="在前面的博客中介绍了，如何使用dlib标定人脸（[python dlib学习（一）：人脸检测](http://blog.csdn.net/hongbin_xu/article/details/78347484)），提取68个特征点（[python dlib学习（二）：人脸特征点标定](http://blog.csdn.net/hongbin_xu/article/details/78348086)">
+  <meta name="description" content="前言在前面的博客中介绍了，如何使用dlib标定人脸（python dlib学习（一）：人脸检测），提取68个特征点（python dlib学习（二）：人脸特征点标定）。这次要在这两个工作的基础之上，将人脸的信息提取成一个128维的向量空间。在这个向量空间上，同一个人脸的更接近，不同人脸的距离更远。度量采用欧式距离，欧氏距离计算不算复杂。">
 <meta name="keywords" content="python,dlib,opencv">
 <meta property="og:type" content="article">
 <meta property="og:title" content="python dlib学习（五）：比对人脸">
 <meta property="og:url" content="http://yoursite.com/2017/10/31/article-title/index.html">
 <meta property="og:site_name" content="许鸿斌个人博客">
-<meta property="og:description" content="在前面的博客中介绍了，如何使用dlib标定人脸（[python dlib学习（一）：人脸检测](http://blog.csdn.net/hongbin_xu/article/details/78347484)），提取68个特征点（[python dlib学习（二）：人脸特征点标定](http://blog.csdn.net/hongbin_xu/article/details/78348086)">
+<meta property="og:description" content="前言在前面的博客中介绍了，如何使用dlib标定人脸（python dlib学习（一）：人脸检测），提取68个特征点（python dlib学习（二）：人脸特征点标定）。这次要在这两个工作的基础之上，将人脸的信息提取成一个128维的向量空间。在这个向量空间上，同一个人脸的更接近，不同人脸的距离更远。度量采用欧式距离，欧氏距离计算不算复杂。">
 <meta property="og:image" content="http://img.blog.csdn.net/20171030110046384?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvaG9uZ2Jpbl94dQ==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast">
 <meta property="og:image" content="http://img.blog.csdn.net/20171030110657214?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvaG9uZ2Jpbl94dQ==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast">
-<meta property="og:updated_time" content="2017-10-31T05:53:17.882Z">
+<meta property="og:updated_time" content="2017-10-31T06:19:52.967Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="python dlib学习（五）：比对人脸">
-<meta name="twitter:description" content="在前面的博客中介绍了，如何使用dlib标定人脸（[python dlib学习（一）：人脸检测](http://blog.csdn.net/hongbin_xu/article/details/78347484)），提取68个特征点（[python dlib学习（二）：人脸特征点标定](http://blog.csdn.net/hongbin_xu/article/details/78348086)">
+<meta name="twitter:description" content="前言在前面的博客中介绍了，如何使用dlib标定人脸（python dlib学习（一）：人脸检测），提取68个特征点（python dlib学习（二）：人脸特征点标定）。这次要在这两个工作的基础之上，将人脸的信息提取成一个128维的向量空间。在这个向量空间上，同一个人脸的更接近，不同人脸的距离更远。度量采用欧式距离，欧氏距离计算不算复杂。">
 <meta name="twitter:image" content="http://img.blog.csdn.net/20171030110046384?watermark/2/text/aHR0cDovL2Jsb2cuY3Nkbi5uZXQvaG9uZ2Jpbl94dQ==/font/5a6L5L2T/fontsize/400/fill/I0JBQkFCMA==/dissolve/70/gravity/SouthEast">
   
     <link rel="alternative" href="/atom.xml" title="许鸿斌个人博客" type="application/atom+xml">
@@ -201,7 +201,7 @@
     
     <div class="article-entry" itemprop="articleBody">
       
-        <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在前面的博客中介绍了，如何使用dlib标定人脸（<a href="http://blog.csdn.net/hongbin_xu/article/details/78347484" target="_blank" rel="external">python dlib学习（一）：人脸检测</a>），提取68个特征点（<a href="http://blog.csdn.net/hongbin_xu/article/details/78348086" target="_blank" rel="external">python dlib学习（二）：人脸特征点标定</a>）。这次要在这两个工作的基础之上，将人脸的信息提取成一个128维的向量空间。在这个向量空间上，同一个人脸的更接近，不同人脸的距离更远。度量采用欧式距离，欧氏距离计算不算复杂。<br>二维情况下：<br>$$distance = \sqrt{(x_1 - x_2)^2 + (y_1 - y_2)^2}$$<br>三维情况下：<br>$$distance = \sqrt{(x_1 - x_2)^2 + (y_1 - y_2)^2 + (z_1 - z_2)^2}$$<br>将其扩展到128维的情况下即可。<br>通常使用的判别阈值是0.6，即如果两个人脸的向量空间的欧式距离超过了0.6，即认定不是同一个人；如果欧氏距离小于0.6，则认为是同一个人。这个距离也可以由自己定，只要效果能更好。</p>
+        <h1 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h1><p>在前面的博客中介绍了，如何使用dlib标定人脸（<a href="http://blog.csdn.net/hongbin_xu/article/details/78347484" target="_blank" rel="external">python dlib学习（一）：人脸检测</a>），提取68个特征点（<a href="http://blog.csdn.net/hongbin_xu/article/details/78348086" target="_blank" rel="external">python dlib学习（二）：人脸特征点标定</a>）。这次要在这两个工作的基础之上，将人脸的信息提取成一个128维的向量空间。在这个向量空间上，同一个人脸的更接近，不同人脸的距离更远。度量采用欧式距离，欧氏距离计算不算复杂。<br><a id="more"></a><br>二维情况下：<br>$$distance = \sqrt{(x_1 - x_2)^2 + (y_1 - y_2)^2}$$<br>三维情况下：<br>$$distance = \sqrt{(x_1 - x_2)^2 + (y_1 - y_2)^2 + (z_1 - z_2)^2}$$<br>将其扩展到128维的情况下即可。<br>通常使用的判别阈值是0.6，即如果两个人脸的向量空间的欧式距离超过了0.6，即认定不是同一个人；如果欧氏距离小于0.6，则认为是同一个人。这个距离也可以由自己定，只要效果能更好。</p>
 <p>实验中使用了两个模型：</p>
 <blockquote>
 <p>shape_predictor_68_face_landmarks.dat：<br><a href="http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2" target="_blank" rel="external">http://dlib.net/files/shape_predictor_68_face_landmarks.dat.bz2</a></p>
